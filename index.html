@@ -53,9 +53,10 @@
             border: 1px solid #ccc;
         }
         .washi-box h4 { margin: 0 0 8px 0; color: var(--shun); border-bottom: 1px solid var(--shun); }
+        .washi-box ul { padding-left: 20px; margin: 0; }
         .settings-box { border: 1px solid var(--kin); padding: 15px; margin-bottom: 20px; text-align: left; }
         h3 { font-size: 14px; margin: 0 0 10px 0; color: var(--kin); }
-        label { display: inline-block; margin-right: 15px; cursor: pointer; font-size: 16px; }
+        .checkbox-group label, .radio-group label { display: inline-block; margin-right: 15px; cursor: pointer; font-size: 16px; margin-bottom: 5px;}
 
         /* ゲーム画面 */
         #question {
@@ -108,12 +109,14 @@
         
         .detail-box { background: rgba(255,255,255,0.05); padding: 15px; font-size: 14px; text-align: left; border: 1px solid #444; margin: 15px 0; }
         .detail-item { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 5px 0; }
+        .detail-label { color: #aaa; }
+        .detail-value { color: #fff; font-weight: bold; }
         
         .shake { animation: shake 0.2s infinite; }
         @keyframes shake { 0% { transform: translate(2px, 2px); } 50% { transform: translate(-2px, -2px); } 100% { transform: translate(2px, -2px); } }
         .hidden { display: none !important; }
 
-        /* 演出 */
+        /* 斬撃エフェクト */
         .slash { position: absolute; top: 50%; left: 0; width: 100%; height: 4px; background: white; transform: rotate(-15deg); opacity: 0; pointer-events: none; }
         .slash-anim { animation: slashEffect 0.2s ease-out; }
         @keyframes slashEffect { 0% { opacity: 1; width: 0; } 100% { opacity: 0; width: 100%; } }
@@ -132,7 +135,7 @@
             <ul>
                 <li>三十秒でどれほどの数式を「斬れる」か競え。</li>
                 <li>「×」や「÷」、複雑な「分配法則」を混ぜるほど、奥義の威力（攻撃力）が増す。</li>
-                <li>最高段位<span style="color:var(--shun)">【剣聖】</span>は、四択・全計算開放時のみ到達可能。</li>
+                <li>最高段位<span style="color:var(--shun)">【剣聖】</span>は、四択・全計算開放時のみ到達可能だ。</li>
             </ul>
         </div>
 
@@ -168,11 +171,11 @@
         <div id="rank-display" class="rank-badge">-</div>
         
         <div class="detail-box">
-            <div class="detail-item"><span>プレイ日時</span><span id="res-datetime"></span></div>
-            <div class="detail-item"><span>正解斬数</span><span id="res-count"></span></div>
-            <div class="detail-item"><span>設定（計算）</span><span id="res-ops"></span></div>
-            <div class="detail-item"><span>標的数</span><span id="res-choices"></span></div>
-            <div class="detail-item"><span>連続修行数</span><span id="res-playcount"></span></div>
+            <div class="detail-item"><span class="detail-label">プレイ日時</span><span id="res-datetime" class="detail-value"></span></div>
+            <div class="detail-item"><span class="detail-label">正解斬数</span><span id="res-count" class="detail-value"></span></div>
+            <div class="detail-item"><span class="detail-label">設定（計算）</span><span id="res-ops" class="detail-value"></span></div>
+            <div class="detail-item"><span class="detail-label">標的数</span><span id="res-choices" class="detail-value"></span></div>
+            <div class="detail-item"><span class="detail-label">連続修行数</span><span id="res-playcount" class="detail-value" style="color:var(--kin)"></span></div>
         </div>
 
         <button class="start-btn" onclick="retryGame()">再修行！</button>
@@ -238,10 +241,10 @@
         } else if (type === 'multi') {
             let n1 = Math.floor(Math.random() * 9) + 2;
             let n2 = Math.floor(Math.random() * 9) + 2;
-            if (Math.random() > 0.5) { // n1*n2x
+            if (Math.random() > 0.5) { // 3 * 4x = 12x
                 qText = `${n1} × ${n2}${char}`;
                 correctAnswer = (n1 * n2) + char;
-            } else { // nx*nx = n^2x^2
+            } else { // 3x * 4x = 12x^2
                 qText = `${n1}${char} × ${n2}${char}`;
                 correctAnswer = (n1 * n2) + char + "²";
             }
@@ -249,10 +252,10 @@
             let n2 = Math.floor(Math.random() * 8) + 2;
             let ansNum = Math.floor(Math.random() * 8) + 2;
             let n1 = n2 * ansNum;
-            if (Math.random() > 0.5) { // nx / n = x
+            if (Math.random() > 0.5) { // 12x / 3 = 4x
                 qText = `${n1}${char} ÷ ${n2}`;
                 correctAnswer = ansNum + char;
-            } else { // nx / x = n
+            } else { // 12x / x = 12
                 qText = `${n1}${char} ÷ ${char}`;
                 correctAnswer = String(n1);
             }
@@ -266,27 +269,47 @@
 
         document.getElementById('question').textContent = qText;
 
-        // 選択肢生成（文字式対応）
+        // 選択肢生成（不正解のバリエーションを生成）
         let options = [correctAnswer];
-        while (options.length < numChoices) {
+        let loopCount = 0;
+        
+        while (options.length < numChoices && loopCount < 50) {
+            loopCount++;
             let wrong;
+            
             if (correctAnswer.includes('²')) {
-                wrong = (parseInt(correctAnswer) + (Math.floor(Math.random()*10)-5)) + char + "²";
+                let offset = Math.floor(Math.random() * 11) - 5;
+                if (offset === 0) offset = 2;
+                let num = parseInt(correctAnswer) + offset;
+                if (num <= 0) num = 1;
+                wrong = num + char + "²";
             } else if (correctAnswer.includes('+')) {
-                wrong = (parseInt(correctAnswer) + (Math.floor(Math.random()*4)-2)) + char + " + " + (Math.floor(Math.random()*20));
-            } else if (isNaN(correctAnswer[0]) === false) {
-                let numPart = parseInt(correctAnswer);
-                let suffix = correctAnswer.replace(/[0-9]/g, '');
-                wrong = (numPart + (Math.floor(Math.random()*10)-5)) + suffix;
+                let offset1 = Math.floor(Math.random() * 7) - 3;
+                let offset2 = Math.floor(Math.random() * 11) - 5;
+                let num1 = parseInt(correctAnswer) + offset1;
+                if (num1 <= 0) num1 = 1;
+                let parts = correctAnswer.split(' + ');
+                let num2 = parseInt(parts[1]) + offset2;
+                if (num2 <= 0) num2 = 1;
+                wrong = num1 + char + " + " + num2;
             } else {
-                wrong = Math.floor(Math.random()*20) + char;
+                let offset = Math.floor(Math.random() * 11) - 5;
+                if (offset === 0) offset = 2;
+                let numPart = parseInt(correctAnswer) + offset;
+                if (numPart <= 0) numPart = 1;
+                let suffix = correctAnswer.replace(/[0-9]/g, '');
+                wrong = numPart + suffix;
             }
-            if (wrong !== correctAnswer && !options.includes(wrong)) options.push(wrong);
+            
+            if (wrong !== correctAnswer && !options.includes(wrong)) {
+                options.push(wrong);
+            }
         }
 
         options.sort(() => Math.random() - 0.5);
         const choicesDiv = document.getElementById('choices');
         choicesDiv.innerHTML = '';
+        
         options.forEach(opt => {
             const btn = document.createElement('button');
             btn.className = 'choice-btn';
@@ -299,7 +322,8 @@
                     nextQuestion();
                 } else {
                     document.body.style.backgroundColor = '#400';
-                    setTimeout(() => document.body.style.backgroundColor = var(--sumi), 100);
+                    // 【修正箇所】色指定の変数をクォーテーションで囲みました
+                    setTimeout(() => document.body.style.backgroundColor = 'var(--sumi)', 100); 
                 }
             };
             choicesDiv.appendChild(btn);
@@ -309,7 +333,7 @@
     function triggerSlash() {
         const slash = document.getElementById('slash-line');
         slash.classList.remove('slash-anim');
-        void slash.offsetWidth; //リフロー
+        void slash.offsetWidth; // アニメーションをリセット
         slash.classList.add('slash-anim');
     }
 
@@ -322,9 +346,8 @@
         const now = new Date();
         const dateStr = `${now.getMonth()+1}月${now.getDate()}日 ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-        // 攻撃力計算（文字式倍率）
         let choiceMult = 1 + (numChoices - 2) * 0.3;
-        let typeBonus = activeTypes.length * 0.2 + (activeTypes.includes('dist')?0.5:0);
+        let typeBonus = activeTypes.length * 0.2 + (activeTypes.includes('dist') ? 0.5 : 0);
         let finalAtk = Math.floor(score * 120 * choiceMult * (1 + typeBonus));
         
         document.getElementById('final-atk').textContent = finalAtk.toLocaleString();
@@ -335,15 +358,18 @@
         document.getElementById('res-ops').textContent = activeTypes.map(t => {
             if(t==='combine') return '合流'; if(t==='multi') return '乗法';
             if(t==='divi') return '除法'; return '分配';
-        }).join('/');
+        }).join(' / ');
         document.getElementById('res-choices').textContent = `${numChoices} 択`;
         document.getElementById('res-playcount').textContent = `${totalPlayCount} 回目`;
     }
 
     function showRank(atk) {
-        let rank = '門下生'; let color = '#aaa';
-        if (atk >= 6000) { rank = '剣聖'; color = var(--shun); }
-        else if (atk >= 4500) { rank = '将軍'; color = var(--kin); }
+        let rank = '門下生'; 
+        let color = '#aaa';
+        
+        // 【修正箇所】色指定の変数をクォーテーションで囲みました
+        if (atk >= 6000) { rank = '剣聖'; color = 'var(--shun)'; }
+        else if (atk >= 4500) { rank = '将軍'; color = 'var(--kin)'; }
         else if (atk >= 3000) { rank = '侍'; color = '#ff69b4'; }
         else if (atk >= 1500) { rank = '足軽'; color = '#00ff00'; }
         
