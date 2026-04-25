@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>算術修行 〜文字の陣〜</title>
+    <style>
+        :root {
+            --sumi: #1a1a1a;
+            --shun: #d3381c; /* 朱色 */
+            --kin: #c8a05d;  /* 金色 */
+            --washi: #f2e8d5; /* 和紙色 */
+        }
+        body {
+            font-family: "Sawarabi Mincho", "Hiragino Mincho ProN", serif;
+            text-align: center;
+            background-color: var(--sumi);
+            background-image: radial-gradient(circle, #333 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: var(--washi);
+            margin: 0;
+            padding: 15px;
+        }
+        #game-container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 25px;
+            background: var(--sumi);
+            border: 3px double var(--kin);
+            border-radius: 5px;
+            position: relative;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+        }
+        h1 {
+            font-size: 28px;
+            color: var(--kin);
+            margin-top: 0;
+            border-bottom: 1px solid var(--kin);
+            padding-bottom: 10px;
+            letter-spacing: 5px;
+        }
+
+        /* 解説・設定 */
+        .washi-box {
+            background-color: var(--washi);
+            color: var(--sumi);
+            padding: 15px;
+            border-radius: 3px;
+            margin-bottom: 20px;
+            text-align: left;
+            font-size: 13px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+            border: 1px solid #ccc;
+        }
+        .washi-box h4 { margin: 0 0 8px 0; color: var(--shun); border-bottom: 1px solid var(--shun); }
+        .settings-box { border: 1px solid var(--kin); padding: 15px; margin-bottom: 20px; text-align: left; }
+        h3 { font-size: 14px; margin: 0 0 10px 0; color: var(--kin); }
+        label { display: inline-block; margin-right: 15px; cursor: pointer; font-size: 16px; }
+
+        /* ゲーム画面 */
+        #question {
+            font-size: 48px;
+            margin: 30px 0;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-shadow: 0 0 15px var(--shun);
+        }
+        #timer { font-size: 26px; color: var(--shun); font-weight: bold; }
+        #score-display { font-size: 20px; color: var(--kin); margin-bottom: 10px; }
+
+        /* 選択肢ボタン */
+        #choices { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+        .choice-btn {
+            flex: 1 1 40%;
+            font-size: 24px;
+            padding: 15px 5px;
+            background: var(--washi);
+            color: var(--sumi);
+            border: 2px solid var(--kin);
+            border-radius: 0;
+            cursor: pointer;
+            font-family: serif;
+            font-weight: bold;
+        }
+        .choice-btn:active { background: var(--kin); color: white; }
+
+        /* 開始ボタン */
+        .start-btn {
+            font-size: 22px;
+            padding: 15px;
+            background: var(--shun);
+            color: white;
+            border: 2px solid var(--kin);
+            width: 100%;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 0 #800000;
+        }
+        .start-btn:active { transform: translateY(4px); box-shadow: none; }
+
+        /* リザルト */
+        .atk-label { font-size: 20px; color: var(--kin); margin-bottom: 0; }
+        .atk-value { font-size: 72px; color: var(--shun); text-shadow: 0 0 15px var(--shun); margin: 0; }
+        .rank-badge { font-size: 80px; margin-top: -10px; color: white; }
+        
+        .detail-box { background: rgba(255,255,255,0.05); padding: 15px; font-size: 14px; text-align: left; border: 1px solid #444; margin: 15px 0; }
+        .detail-item { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 5px 0; }
+        
+        .shake { animation: shake 0.2s infinite; }
+        @keyframes shake { 0% { transform: translate(2px, 2px); } 50% { transform: translate(-2px, -2px); } 100% { transform: translate(2px, -2px); } }
+        .hidden { display: none !important; }
+
+        /* 演出 */
+        .slash { position: absolute; top: 50%; left: 0; width: 100%; height: 4px; background: white; transform: rotate(-15deg); opacity: 0; pointer-events: none; }
+        .slash-anim { animation: slashEffect 0.2s ease-out; }
+        @keyframes slashEffect { 0% { opacity: 1; width: 0; } 100% { opacity: 0; width: 100%; } }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="slash-line" class="slash"></div>
+
+    <div id="start-screen">
+        <h1>算術修行 〜文字の陣〜</h1>
+        
+        <div class="washi-box">
+            <h4>【修行の心得】</h4>
+            <ul>
+                <li>三十秒でどれほどの数式を「斬れる」か競え。</li>
+                <li>「×」や「÷」、複雑な「分配法則」を混ぜるほど、奥義の威力（攻撃力）が増す。</li>
+                <li>最高段位<span style="color:var(--shun)">【剣聖】</span>は、四択・全計算開放時のみ到達可能。</li>
+            </ul>
+        </div>
+
+        <div class="settings-box">
+            <h3>陣立て（計算内容）</h3>
+            <div class="checkbox-group">
+                <label><input type="checkbox" id="op-combine" checked> 合流(±)</label>
+                <label><input type="checkbox" id="op-multi" checked> 乗法(×)</label>
+                <label><input type="checkbox" id="op-divi" checked> 除法(÷)</label>
+                <label><input type="checkbox" id="op-dist"> 分配( )</label>
+            </div>
+            <br>
+            <h3>標的数（選択肢）</h3>
+            <div class="radio-group">
+                <label><input type="radio" name="choiceCount" value="2"> 二</label>
+                <label><input type="radio" name="choiceCount" value="3"> 三</label>
+                <label><input type="radio" name="choiceCount" value="4" checked> 四</label>
+            </div>
+        </div>
+        <button class="start-btn" onclick="startGame()">修行開始！</button>
+    </div>
+
+    <div id="game-screen" class="hidden">
+        <div id="timer">残り時間：30</div>
+        <div id="score-display">斬数：0</div>
+        <div id="question"></div>
+        <div id="choices"></div>
+    </div>
+
+    <div id="result-screen" class="hidden">
+        <p class="atk-label">ー 総 攻撃力 ー</p>
+        <h2 id="final-atk" class="atk-value">0</h2>
+        <div id="rank-display" class="rank-badge">-</div>
+        
+        <div class="detail-box">
+            <div class="detail-item"><span>プレイ日時</span><span id="res-datetime"></span></div>
+            <div class="detail-item"><span>正解斬数</span><span id="res-count"></span></div>
+            <div class="detail-item"><span>設定（計算）</span><span id="res-ops"></span></div>
+            <div class="detail-item"><span>標的数</span><span id="res-choices"></span></div>
+            <div class="detail-item"><span>連続修行数</span><span id="res-playcount"></span></div>
+        </div>
+
+        <button class="start-btn" onclick="retryGame()">再修行！</button>
+        <p style="margin-top:15px; color:var(--kin); cursor:pointer; text-decoration:underline;" onclick="location.reload()">設定に戻る</p>
+    </div>
+</div>
+
+<script>
+    let score = 0;
+    let timeLeft = 30;
+    let correctAnswer;
+    let timerId;
+    let activeTypes = [];
+    let numChoices = 4;
+    let totalPlayCount = 0;
+
+    function startGame() {
+        activeTypes = [];
+        if (document.getElementById('op-combine').checked) activeTypes.push('combine');
+        if (document.getElementById('op-multi').checked) activeTypes.push('multi');
+        if (document.getElementById('op-divi').checked) activeTypes.push('divi');
+        if (document.getElementById('op-dist').checked) activeTypes.push('dist');
+
+        if (activeTypes.length === 0) { alert('修行内容を選んでください。'); return; }
+
+        numChoices = parseInt(document.querySelector('input[name="choiceCount"]:checked').value);
+        totalPlayCount++;
+
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        document.getElementById('result-screen').classList.add('hidden');
+        
+        score = 0;
+        timeLeft = 30;
+        nextQuestion();
+        
+        timerId = setInterval(() => {
+            timeLeft--;
+            document.getElementById('timer').textContent = `残り時間：${timeLeft}`;
+            if (timeLeft <= 5) document.body.classList.add('shake');
+            if (timeLeft <= 0) endGame();
+        }, 1000);
+    }
+
+    function retryGame() { startGame(); }
+
+    function nextQuestion() {
+        const type = activeTypes[Math.floor(Math.random() * activeTypes.length)];
+        const char = ['a', 'x', 'b', 'y'][Math.floor(Math.random() * 4)];
+        let qText = "";
+        
+        if (type === 'combine') {
+            let n1 = Math.floor(Math.random() * 15) + 1;
+            let n2 = Math.floor(Math.random() * 15) + 1;
+            let mode = Math.random() > 0.5 ? '+' : '-';
+            if (mode === '+') {
+                qText = `${n1}${char} + ${n2}${char}`;
+                correctAnswer = (n1 + n2) + char;
+            } else {
+                qText = `${n1 + n2}${char} - ${n1}${char}`;
+                correctAnswer = n2 + char;
+            }
+        } else if (type === 'multi') {
+            let n1 = Math.floor(Math.random() * 9) + 2;
+            let n2 = Math.floor(Math.random() * 9) + 2;
+            if (Math.random() > 0.5) { // n1*n2x
+                qText = `${n1} × ${n2}${char}`;
+                correctAnswer = (n1 * n2) + char;
+            } else { // nx*nx = n^2x^2
+                qText = `${n1}${char} × ${n2}${char}`;
+                correctAnswer = (n1 * n2) + char + "²";
+            }
+        } else if (type === 'divi') {
+            let n2 = Math.floor(Math.random() * 8) + 2;
+            let ansNum = Math.floor(Math.random() * 8) + 2;
+            let n1 = n2 * ansNum;
+            if (Math.random() > 0.5) { // nx / n = x
+                qText = `${n1}${char} ÷ ${n2}`;
+                correctAnswer = ansNum + char;
+            } else { // nx / x = n
+                qText = `${n1}${char} ÷ ${char}`;
+                correctAnswer = String(n1);
+            }
+        } else if (type === 'dist') {
+            let n1 = Math.floor(Math.random() * 5) + 2;
+            let n2 = Math.floor(Math.random() * 5) + 1;
+            let n3 = Math.floor(Math.random() * 5) + 1;
+            qText = `${n1}(${n2}${char} + ${n3})`;
+            correctAnswer = (n1 * n2) + char + " + " + (n1 * n3);
+        }
+
+        document.getElementById('question').textContent = qText;
+
+        // 選択肢生成（文字式対応）
+        let options = [correctAnswer];
+        while (options.length < numChoices) {
+            let wrong;
+            if (correctAnswer.includes('²')) {
+                wrong = (parseInt(correctAnswer) + (Math.floor(Math.random()*10)-5)) + char + "²";
+            } else if (correctAnswer.includes('+')) {
+                wrong = (parseInt(correctAnswer) + (Math.floor(Math.random()*4)-2)) + char + " + " + (Math.floor(Math.random()*20));
+            } else if (isNaN(correctAnswer[0]) === false) {
+                let numPart = parseInt(correctAnswer);
+                let suffix = correctAnswer.replace(/[0-9]/g, '');
+                wrong = (numPart + (Math.floor(Math.random()*10)-5)) + suffix;
+            } else {
+                wrong = Math.floor(Math.random()*20) + char;
+            }
+            if (wrong !== correctAnswer && !options.includes(wrong)) options.push(wrong);
+        }
+
+        options.sort(() => Math.random() - 0.5);
+        const choicesDiv = document.getElementById('choices');
+        choicesDiv.innerHTML = '';
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.textContent = opt;
+            btn.onclick = () => {
+                if (opt === correctAnswer) {
+                    score++;
+                    document.getElementById('score-display').textContent = `斬数：${score}`;
+                    triggerSlash();
+                    nextQuestion();
+                } else {
+                    document.body.style.backgroundColor = '#400';
+                    setTimeout(() => document.body.style.backgroundColor = var(--sumi), 100);
+                }
+            };
+            choicesDiv.appendChild(btn);
+        });
+    }
+
+    function triggerSlash() {
+        const slash = document.getElementById('slash-line');
+        slash.classList.remove('slash-anim');
+        void slash.offsetWidth; //リフロー
+        slash.classList.add('slash-anim');
+    }
+
+    function endGame() {
+        clearInterval(timerId);
+        document.body.classList.remove('shake');
+        document.getElementById('game-screen').classList.add('hidden');
+        document.getElementById('result-screen').classList.remove('hidden');
+
+        const now = new Date();
+        const dateStr = `${now.getMonth()+1}月${now.getDate()}日 ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+        // 攻撃力計算（文字式倍率）
+        let choiceMult = 1 + (numChoices - 2) * 0.3;
+        let typeBonus = activeTypes.length * 0.2 + (activeTypes.includes('dist')?0.5:0);
+        let finalAtk = Math.floor(score * 120 * choiceMult * (1 + typeBonus));
+        
+        document.getElementById('final-atk').textContent = finalAtk.toLocaleString();
+        showRank(finalAtk);
+
+        document.getElementById('res-datetime').textContent = dateStr;
+        document.getElementById('res-count').textContent = `${score} 斬`;
+        document.getElementById('res-ops').textContent = activeTypes.map(t => {
+            if(t==='combine') return '合流'; if(t==='multi') return '乗法';
+            if(t==='divi') return '除法'; return '分配';
+        }).join('/');
+        document.getElementById('res-choices').textContent = `${numChoices} 択`;
+        document.getElementById('res-playcount').textContent = `${totalPlayCount} 回目`;
+    }
+
+    function showRank(atk) {
+        let rank = '門下生'; let color = '#aaa';
+        if (atk >= 6000) { rank = '剣聖'; color = var(--shun); }
+        else if (atk >= 4500) { rank = '将軍'; color = var(--kin); }
+        else if (atk >= 3000) { rank = '侍'; color = '#ff69b4'; }
+        else if (atk >= 1500) { rank = '足軽'; color = '#00ff00'; }
+        
+        const rd = document.getElementById('rank-display');
+        rd.textContent = rank;
+        rd.style.color = color;
+        rd.style.textShadow = `0 0 20px ${color}`;
+    }
+</script>
+</body>
+</html>
