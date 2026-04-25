@@ -174,6 +174,7 @@
         <div class="detail-box">
             <div class="detail-item"><span class="detail-label">プレイ日時</span><span id="res-datetime" class="detail-value"></span></div>
             <div class="detail-item"><span class="detail-label">正解斬数</span><span id="res-count" class="detail-value"></span></div>
+            <div class="detail-item"><span class="detail-label">打ち損じ（ミス）</span><span id="res-mistakes" class="detail-value" style="color:var(--shun)"></span></div>
             <div class="detail-item"><span class="detail-label">設定（計算）</span><span id="res-ops" class="detail-value"></span></div>
             <div class="detail-item"><span class="detail-label">標的数</span><span id="res-choices" class="detail-value"></span></div>
             <div class="detail-item"><span class="detail-label">連続修行数</span><span id="res-playcount" class="detail-value" style="color:var(--kin)"></span></div>
@@ -186,6 +187,7 @@
 
 <script>
     let score = 0;
+    let mistakeCount = 0; // ミス回数を記録する変数
     let timeLeft = 30;
     let correctAnswer;
     let timerId;
@@ -210,6 +212,7 @@
         document.getElementById('result-screen').classList.add('hidden');
         
         score = 0;
+        mistakeCount = 0; // ミス回数をリセット
         timeLeft = 30;
         document.getElementById('timer').textContent = `残り時間：${timeLeft}`;
         document.getElementById('score-display').textContent = `斬数：${score}`;
@@ -314,7 +317,9 @@
                     triggerSlash();
                     nextQuestion();
                 } else {
-                    // 【追加】ペナルティ：時間を1秒減らす
+                    // ミス回数を追加
+                    mistakeCount++;
+                    
                     timeLeft -= 1;
                     if (timeLeft < 0) timeLeft = 0;
                     document.getElementById('timer').textContent = `残り時間：${timeLeft}`;
@@ -356,6 +361,8 @@
 
         document.getElementById('res-datetime').textContent = dateStr;
         document.getElementById('res-count').textContent = `${score} 斬`;
+        // ミス回数を画面にセット
+        document.getElementById('res-mistakes').textContent = `${mistakeCount} 回`;
         document.getElementById('res-ops').textContent = activeTypes.map(t => {
             if(t==='combine') return '合流'; if(t==='multi') return '乗法';
             if(t==='divi') return '除法'; return '分配';
