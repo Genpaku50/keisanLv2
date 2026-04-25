@@ -20,6 +20,7 @@
             color: var(--washi);
             margin: 0;
             padding: 15px;
+            transition: background-color 0.1s;
         }
         #game-container {
             max-width: 480px;
@@ -134,8 +135,8 @@
             <h4>【修行の心得】</h4>
             <ul>
                 <li>三十秒でどれほどの数式を「斬れる」か競え。</li>
-                <li>「×」や「÷」、複雑な「分配法則」を混ぜるほど、奥義の威力（攻撃力）が増す。</li>
-                <li>最高段位<span style="color:var(--shun)">【剣聖】</span>は、四択・全計算開放時のみ到達可能だ。</li>
+                <li>「×」や「÷」、複雑な「分配法則」を混ぜるほど奥義の威力が増す。</li>
+                <li><span style="color:var(--shun); font-weight:bold;">【掟】間違いを犯せば、持ち時間が一秒減少するぞ。</span></li>
             </ul>
         </div>
 
@@ -210,12 +211,19 @@
         
         score = 0;
         timeLeft = 30;
+        document.getElementById('timer').textContent = `残り時間：${timeLeft}`;
+        document.getElementById('score-display').textContent = `斬数：${score}`;
+        
         nextQuestion();
         
         timerId = setInterval(() => {
             timeLeft--;
+            if (timeLeft < 0) timeLeft = 0;
             document.getElementById('timer').textContent = `残り時間：${timeLeft}`;
-            if (timeLeft <= 5) document.body.classList.add('shake');
+            
+            if (timeLeft <= 5 && timeLeft > 0) document.body.classList.add('shake');
+            else document.body.classList.remove('shake');
+            
             if (timeLeft <= 0) endGame();
         }, 1000);
     }
@@ -241,10 +249,10 @@
         } else if (type === 'multi') {
             let n1 = Math.floor(Math.random() * 9) + 2;
             let n2 = Math.floor(Math.random() * 9) + 2;
-            if (Math.random() > 0.5) { // 3 * 4x = 12x
+            if (Math.random() > 0.5) {
                 qText = `${n1} × ${n2}${char}`;
                 correctAnswer = (n1 * n2) + char;
-            } else { // 3x * 4x = 12x^2
+            } else {
                 qText = `${n1}${char} × ${n2}${char}`;
                 correctAnswer = (n1 * n2) + char + "²";
             }
@@ -252,10 +260,10 @@
             let n2 = Math.floor(Math.random() * 8) + 2;
             let ansNum = Math.floor(Math.random() * 8) + 2;
             let n1 = n2 * ansNum;
-            if (Math.random() > 0.5) { // 12x / 3 = 4x
+            if (Math.random() > 0.5) {
                 qText = `${n1}${char} ÷ ${n2}`;
                 correctAnswer = ansNum + char;
-            } else { // 12x / x = 12
+            } else {
                 qText = `${n1}${char} ÷ ${char}`;
                 correctAnswer = String(n1);
             }
@@ -269,41 +277,26 @@
 
         document.getElementById('question').textContent = qText;
 
-        // 選択肢生成（不正解のバリエーションを生成）
         let options = [correctAnswer];
         let loopCount = 0;
-        
         while (options.length < numChoices && loopCount < 50) {
             loopCount++;
             let wrong;
-            
             if (correctAnswer.includes('²')) {
                 let offset = Math.floor(Math.random() * 11) - 5;
                 if (offset === 0) offset = 2;
-                let num = parseInt(correctAnswer) + offset;
-                if (num <= 0) num = 1;
-                wrong = num + char + "²";
+                wrong = (parseInt(correctAnswer) + offset) + char + "²";
             } else if (correctAnswer.includes('+')) {
-                let offset1 = Math.floor(Math.random() * 7) - 3;
-                let offset2 = Math.floor(Math.random() * 11) - 5;
-                let num1 = parseInt(correctAnswer) + offset1;
-                if (num1 <= 0) num1 = 1;
                 let parts = correctAnswer.split(' + ');
-                let num2 = parseInt(parts[1]) + offset2;
-                if (num2 <= 0) num2 = 1;
-                wrong = num1 + char + " + " + num2;
+                wrong = (parseInt(parts[0]) + (Math.floor(Math.random()*7)-3)) + char + " + " + (parseInt(parts[1]) + (Math.floor(Math.random()*11)-5));
             } else {
                 let offset = Math.floor(Math.random() * 11) - 5;
                 if (offset === 0) offset = 2;
                 let numPart = parseInt(correctAnswer) + offset;
-                if (numPart <= 0) numPart = 1;
                 let suffix = correctAnswer.replace(/[0-9]/g, '');
                 wrong = numPart + suffix;
             }
-            
-            if (wrong !== correctAnswer && !options.includes(wrong)) {
-                options.push(wrong);
-            }
+            if (wrong !== correctAnswer && !options.includes(wrong) && !wrong.includes('NaN')) options.push(wrong);
         }
 
         options.sort(() => Math.random() - 0.5);
@@ -321,9 +314,17 @@
                     triggerSlash();
                     nextQuestion();
                 } else {
+                    // 【追加】ペナルティ：時間を1秒減らす
+                    timeLeft -= 1;
+                    if (timeLeft < 0) timeLeft = 0;
+                    document.getElementById('timer').textContent = `残り時間：${timeLeft}`;
+                    
                     document.body.style.backgroundColor = '#400';
-                    // 【修正箇所】色指定の変数をクォーテーションで囲みました
-                    setTimeout(() => document.body.style.backgroundColor = 'var(--sumi)', 100); 
+                    setTimeout(() => {
+                        document.body.style.backgroundColor = 'var(--sumi)';
+                    }, 100);
+                    
+                    if (timeLeft <= 0) endGame();
                 }
             };
             choicesDiv.appendChild(btn);
@@ -333,7 +334,7 @@
     function triggerSlash() {
         const slash = document.getElementById('slash-line');
         slash.classList.remove('slash-anim');
-        void slash.offsetWidth; // アニメーションをリセット
+        void slash.offsetWidth;
         slash.classList.add('slash-anim');
     }
 
@@ -364,10 +365,7 @@
     }
 
     function showRank(atk) {
-        let rank = '門下生'; 
-        let color = '#aaa';
-        
-        // 【修正箇所】色指定の変数をクォーテーションで囲みました
+        let rank = '門下生'; let color = '#aaa';
         if (atk >= 6000) { rank = '剣聖'; color = 'var(--shun)'; }
         else if (atk >= 4500) { rank = '将軍'; color = 'var(--kin)'; }
         else if (atk >= 3000) { rank = '侍'; color = '#ff69b4'; }
